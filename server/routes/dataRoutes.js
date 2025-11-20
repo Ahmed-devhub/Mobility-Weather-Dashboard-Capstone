@@ -20,8 +20,9 @@ router.get('/weather/:location',(req,res)=>{
         axios.get(url).then((response) =>{
             const cleanedWeatherData = {
                 city: response.data.name,
-                temperature: response.data.main.temp,
+                temp: response.data.main.temp,
                 humidity: response.data.main.humidity,
+                icon: response.data.weather[0].icon,
                 wind: response.data.wind,
                 visibility: response.data.visibility,
                 main: response.data.weather[0].main,
@@ -43,6 +44,7 @@ router.get('traffic/:borough',(req,res)=>{
     const cleanedTrafficData = {}
     const borough = req.params.borough
     axios.get(`https://data.cityofnewyork.us/resource/i4gi-tjb9.json?$where=borough=${borough}`).then((response)=>{
+        cleanedTrafficData.borough = borough
         for (let row of response.data){
             if(row.speed){
                 totalSpeed += Number(row.speed)
@@ -50,19 +52,19 @@ router.get('traffic/:borough',(req,res)=>{
             }
         }
         const averageSpeed = totalSpeed / count
-        cleanedTrafficData.AverageSpeed = averageSpeed
+        cleanedTrafficData.avg_speed = averageSpeed
         
         let congestion = ""
-        if(averageSpeed >= 25){
+        if(averageSpeed >= 20){
             congestion = "Low"
         }
-        else if (averageSpeed >= 10){
+        else if (averageSpeed >= 10 && averageSpeed <20){
             congestion = "Medium"
         }
         else{  
             congestion = "High"
         }
-        cleanedTrafficData.CongestionLevel = congestion
+        cleanedTrafficData.congestion_level = congestion
 
         return res.json(cleanedTrafficData)
     }).catch((e)=>{

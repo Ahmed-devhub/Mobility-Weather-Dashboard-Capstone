@@ -19,7 +19,7 @@ router.get('/weather/:location',(req,res)=>{
                 temp: response.data.main.temp,
                 humidity: response.data.main.humidity,
                 icon: response.data.weather[0].icon,
-                wind: response.data.wind,
+                windspeed: response.data.wind.speed,
                 visibility: response.data.visibility,
                 main: response.data.weather[0].main,
                 sunrise: response.data.sys.sunrise,

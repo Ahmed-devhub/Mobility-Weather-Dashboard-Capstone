@@ -4,7 +4,8 @@ const dataSlice = createSlice({
   name: "data",
   initialState: {
     weather: {},
-    traffic: {}
+    traffic: {},
+    refresh: {}
   },
   reducers: {
     setWeather(state, action) {
@@ -12,9 +13,12 @@ const dataSlice = createSlice({
     },
     setTraffic(state, action) {
       state.traffic = action.payload;
+    },
+    setRefresh(state, action){
+      state.refresh = action.payload
     }
   }
 });
 
-export const { setWeather, setTraffic } = dataSlice.actions;
+export const { setWeather, setTraffic, setRefresh } = dataSlice.actions;
 export default dataSlice.reducer;

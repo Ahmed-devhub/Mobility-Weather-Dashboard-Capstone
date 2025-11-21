@@ -1,7 +1,6 @@
 import express from 'express'
 import 'dotenv/config'
 import axios from 'axios'
-import mongoose from 'mongoose'
 import DailyData from '../models/DailyData'
 
 const router = express.Router()

@@ -4,10 +4,6 @@ import axios from 'axios'
 
 const router = express.Router()
 
-router.get('/test',(req,res)=>{
-    return res.json({message: "Backend working"})
-})
-
 router.get('/weather/:location',(req,res)=>{
     
     const apiKey = process.env.OPENWEATHER_API_KEY

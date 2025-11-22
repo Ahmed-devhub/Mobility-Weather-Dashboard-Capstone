@@ -1,51 +1,80 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import axios from "axios"
 import { useDispatch, useSelector } from "react-redux"
-import { setWeather, setTraffic, setRefresh } from "../redux/slices/dataSlice"
+import { setWeather, setTraffic, setRefresh } from "../redux/slices/dataSlice.js"
 import KPICard from "../components/KPICard.jsx"
+import {BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell} from "recharts";
 
 function Dashboard() {
-  const weatherRes = {}
-  const trafficRes = {}
-  const refreshRes = {}
+
   const dispatch = useDispatch()
   const weather = useSelector((state) => state.data.weather)
   const traffic = useSelector((state) => state.data.traffic)
   const refresh = useSelector((state)=> state.data.refresh)
+  const [borough, setBorough] = useState([])
+  const boroughColors = {
+    Brooklyn: "#ff6384",
+    Manhattan: "#36a2eb",
+    Queens: "#ffcd56",
+    Bronx: "#4bc0c0",
+    "Staten Island": "#9966ff" 
+  } 
 
-  useEffect(async () => {
-    try{
-      weatherRes = await axios.get("http://localhost:5000/api/weather/11230")
-      dispatch(setWeather(weatherRes.data))
-    }
-    catch(err){ 
-      console.log(err)
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const weatherRes = await axios.get("http://localhost:5000/api/weather/staten%20island");
+        dispatch(setWeather(weatherRes.data));
+      } catch (err) {
+        console.log(err);
+      }
+
+      try {
+        const trafficRes = await axios.get("http://localhost:5000/api/traffic/staten%20island");
+        dispatch(setTraffic(trafficRes.data));
+      } catch (err) {
+        console.log(err);
+      }
+
+      try {
+        const boroughs = ['brooklyn', 'queens', 'bronx', 'manhattan', 'staten-island']
+        const result = await Promise.all(
+          boroughs.map(borough =>
+            axios.get(`http://localhost:5000/api/traffic/${borough}`)
+          )
+        )
+        const data = result.map(res=>({
+          borough: res.data.borough,
+          avg_speed: res.data.avg_speed
+        }))
+        setBorough(data)
+      }
+      catch(err){
+        console.log(err)
+      }
     }
 
-    try{
-      trafficRes = await axios.get("http://localhost:5000/api/traffic/brooklyn")
-      dispatch(setTraffic(trafficRes.data))
-    }
-    catch(err){
-      console.log(err)
-    }
+    fetchData();
   }, []);
 
   async function handleRefresh(){
     try{
-      weatherRes = await axios.get("http://localhost:5000/api/weather/11230")
+      const weatherRes = await axios.get("http://localhost:5000/api/weather/staten%20island")
       dispatch(setWeather(weatherRes.data))
 
-      trafficRes = await axios.get("http://localhost:5000/api/traffic/brooklyn")
+      const trafficRes = await axios.get("http://localhost:5000/api/traffic/staten%20island")
       dispatch(setTraffic(trafficRes.data))
 
-      refreshRes = await axios.post("http://localhost:5000/api/refresh-data")
+      const refreshRes = await axios.post("http://localhost:5000/api/refresh-data",{
+        location: "10314",
+        borough: "staten island"
+      })
       dispatch(setRefresh(refreshRes.data)) 
 
       if(refreshRes.data.success){
         setTimeout(() => {
-          dispatch(setRefresh({})) 
-        }, 3000)
+          dispatch(setRefresh({ updatedAt: refreshRes.data.updatedAt })) 
+        }, 7000)
       }
     }
     catch(err){
@@ -63,22 +92,50 @@ function Dashboard() {
         </p>
       )}
 
-      <KPICard title="Temperature (F)" value={weatherRes.temp}/>
-      <KPICard title="Condition" value={weatherRes.main}/>
-      <KPICard title="Humidity (%)" value={weatherRes.humidity}/>
+      <KPICard title="Temperature (°C)" value={(weather?.temp - 273.15).toFixed(1)}/>
+      <KPICard title="Condition" value={weather?.main}/>
+      <KPICard title="Humidity (%)" value={weather?.humidity}/>
       
-      <KPICard title="Avg Traffic Speed" value={trafficRes.avg_speed}/>
-      <KPICard title="Congestion Level" value={trafficRes.congestion_level}/>
+      <KPICard title="Avg Traffic Speed" value={traffic?.avg_speed}/>
+      <KPICard title="Congestion Level" value={traffic?.congestion_level}/>
 
-      <KPICard title="Last Updated" value={refreshRes.updatedAt}/>
+      <KPICard title="Last Updated" value={refresh?.updatedAt ? new Date(refresh.updatedAt).toLocaleString() : ""}/>
 
       <h2>Weather</h2>
-      <pre>{JSON.stringify(weather, null, 2)}</pre>
+      <p><strong>City: </strong>{weather?.city}</p>
+      <p><strong>Temp: </strong>{((weather?.temp - 273.15) * 9/5 + 32).toFixed(1)}°F / {(weather?.temp - 273.15).toFixed(1)}°C</p>
+      <p><strong>Humidity: </strong>{weather?.humidity}</p>
+      <p><strong>Icon:</strong><img src={`https://openweathermap.org/img/wn/${weather?.icon}.png`} alt="weather icon" /></p>
+      <p><strong>Wind Speed: </strong>{(weather?.windspeed * 2.237).toFixed(2)} mph</p>
+      <p><strong>Visibility: </strong>{(weather?.visibility / 1609).toFixed(1)} miles</p>
+      <p><strong>Main: </strong>{weather?.main}</p>
+      <p><strong>Sunrise: </strong>{new Date(weather?.sunrise * 1000).toLocaleTimeString([], { timeStyle: "short" })}</p>
+      <p><strong>Sunset: </strong>{new Date(weather?.sunset * 1000).toLocaleTimeString([], { timeStyle: "short" })}</p>
 
       <h2>Traffic</h2>
-      <pre>{JSON.stringify(traffic, null, 2)}</pre>
+      <p><strong>Borough: </strong>{traffic?.borough}</p>
+      <p><strong>Average Speed: </strong>{traffic?.avg_speed}</p>
+      <p><strong>Congestion Level: </strong>{traffic?.congestion_level}</p>
 
-      <button onCLick = {handleRefresh}>Refresh</button>    
+      <button onClick = {handleRefresh}>Refresh</button>    
+
+      <BarChart width={500} height={300} data={borough}>
+      <CartesianGrid strokeDasharray="3 3" />
+      <XAxis dataKey="borough" />
+      <YAxis />
+      <Tooltip />
+      <Legend />
+      <Bar dataKey="avg_speed">
+        {
+          borough.map((entry, index) => (
+            <Cell 
+              key={`cell-${index}`}
+              fill={boroughColors[entry.borough]}
+            />
+          ))
+        } 
+      </Bar>
+      </BarChart>
     </>
   );
 }
